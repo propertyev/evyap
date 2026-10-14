@@ -20,7 +20,10 @@ const prisma = new PrismaClient();
 
 async function main() {
   const email = (process.env.SEED_OWNER_EMAIL || 'owner@evyap.local').toLowerCase();
-  const password = process.env.SEED_OWNER_PASSWORD || 'ChangeMe-EVyap-2026';
+  const password = process.env.SEED_OWNER_PASSWORD || (process.env.NODE_ENV === 'production' ? '' : 'ChangeMe-EVyap-2026');
+  if (!password || password.length < 10) {
+    throw new Error('SEED_OWNER_PASSWORD must be set (10+ characters) when seeding a production database.');
+  }
   const year = new Date().getFullYear();
 
   let company = await prisma.company.findFirst({ where: { name: 'EVyap' } });

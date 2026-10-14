@@ -18,4 +18,5 @@ FROM base AS run
 ENV NODE_ENV=production
 COPY --from=build /app /app
 EXPOSE 3000
+ENV HOSTNAME=0.0.0.0
 CMD ["sh", "scripts/docker-entrypoint.sh"]

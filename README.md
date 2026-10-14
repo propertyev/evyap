@@ -78,3 +78,14 @@ re-import adds 0 rows · undo restores totals · opening capital 15,000 → "Aka
 
 See `.env.example`. `AI_CATEGORISE=true` + `ANTHROPIC_API_KEY` (and optional `ANTHROPIC_MODEL`) enables AI suggestions for
 rows no rule matched; only those descriptions are sent.
+
+## Deploy on Railway
+
+1. New project → **Deploy from GitHub repo** → `propertyev/evyap` (Railway builds the `Dockerfile`).
+2. Add a **PostgreSQL** database to the project.
+3. On the app service set variables:
+   - `DATABASE_URL` = reference to the Postgres service's `DATABASE_URL`
+   - `NEXTAUTH_SECRET` = output of `openssl rand -base64 32`
+   - `NEXTAUTH_URL` = the service's public URL (Settings → Networking → Generate domain)
+   - `SEED_OWNER_EMAIL`, `SEED_OWNER_PASSWORD` (10+ chars — the seed refuses to run in production without it)
+4. Deploy. The container runs `prisma db push`, seeds reference data and the owner, then starts on `$PORT`.

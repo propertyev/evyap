@@ -4,4 +4,4 @@ set -e
 node scripts/set-provider.mjs
 npx prisma db push --skip-generate
 npx tsx prisma/seed.ts
-exec node node_modules/next/dist/bin/next start -p 3000
+exec node node_modules/next/dist/bin/next start -p "${PORT:-3000}" -H 0.0.0.0
