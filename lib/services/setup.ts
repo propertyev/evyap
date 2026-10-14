@@ -85,7 +85,7 @@ export const taxSettingsInput = z.object({
 export type TaxSettingsInput = z.infer<typeof taxSettingsInput>;
 
 export async function saveTaxSettings(prisma: PrismaClient, ctx: Ctx, year: number, raw: TaxSettingsInput) {
-  assertCan(ctx.role, 'entry:create');
+  assertCan(ctx.role, 'settings:edit');
   const input = taxSettingsInput.parse(raw);
   const fy = await getOrCreateFiscalYear(prisma, ctx.companyId, year);
   await assertYearsUnlocked(prisma, ctx.companyId, [year]);

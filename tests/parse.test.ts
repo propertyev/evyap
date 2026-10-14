@@ -129,3 +129,24 @@ describe('tax & zakat', () => {
     expect(r.tax).toBe(0);
   });
 });
+
+describe('AI categorisation (flagged)', () => {
+  it('only accepts categories from the allowed list', async () => {
+    const { suggestCategories } = await import('@/lib/import/ai');
+    process.env.ANTHROPIC_API_KEY = 'test-key';
+    const fake = (async () =>
+      new Response(JSON.stringify({ content: [{ type: 'text', text: '{"0":"Hotel","1":"Made Up Category","2":"Sales"}' }] }))) as unknown as typeof fetch;
+    const res = await suggestCategories(
+      [
+        { id: 0, details: 'Some inn', direction: 'OUT' },
+        { id: 1, details: 'x', direction: 'OUT' },
+        { id: 2, details: 'y', direction: 'OUT' }, // "Sales" is a Cash In category -> rejected for OUT
+      ],
+      cats,
+      fake,
+    );
+    expect(res.get(0)).toBe('Hotel');
+    expect(res.has(1)).toBe(false);
+    expect(res.has(2)).toBe(false);
+  });
+});

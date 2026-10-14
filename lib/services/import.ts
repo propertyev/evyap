@@ -5,6 +5,7 @@ import { AppError } from '../errors';
 import { audit } from '../audit';
 import { txHash } from '../hash';
 import { assertCan } from '../permissions';
+import { aiEnabled, suggestCategories } from '../import/ai';
 import { categorise, compileRules, learnKeyword, type CategoryLite, type RuleLite } from '../import/categorise';
 import { headerSignature, type ColumnMap } from '../import/columns';
 import { parseUpload, type ParsedSheet } from '../import/parse';
@@ -19,7 +20,7 @@ export interface PreviewRow {
   amount: number; // sen
   category: string;
   suggested: string;
-  source: 'column' | 'rule' | 'learned' | 'fallback';
+  source: 'column' | 'rule' | 'learned' | 'fallback' | 'ai';
   hash: string;
   duplicate: boolean;
 }
@@ -101,6 +102,23 @@ export async function previewImport(
           category: c.category, suggested: c.category, source: c.source, hash, duplicate,
         };
       });
+      if (aiEnabled()) {
+        const pending = rows
+          .map((r, i) => ({ r, i }))
+          .filter(({ r }) => r.source === 'fallback' && !r.duplicate && r.details);
+        try {
+          const picks = await suggestCategories(
+            pending.map(({ r, i }) => ({ id: i, details: r.details, direction: r.direction })),
+            categories,
+          );
+          for (const { r, i } of pending) {
+            const c = picks.get(i);
+            if (c) Object.assign(r, { category: c, suggested: c, source: 'ai' as const });
+          }
+        } catch {
+          /* AI is best-effort; fall back to rule defaults */
+        }
+      }
       sheets.push({
         fileName: ps.fileName, fileType: ps.fileType, sheetName: ps.sheetName, signature: ps.signature,
         headers: ps.headers, columnMap: ps.columnMap, mapSource: ps.mapSource, mapDescription: ps.mapDescription,

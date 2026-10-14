@@ -1,0 +1,40 @@
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: evyap
+      POSTGRES_PASSWORD: evyap
+      POSTGRES_DB: evyap
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U evyap -d evyap"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  app:
+    build:
+      context: .
+      args:
+        DATABASE_URL: postgresql://evyap:evyap@db:5432/evyap?schema=public
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "3000:3000"
+    environment:
+      DATABASE_URL: postgresql://evyap:evyap@db:5432/evyap?schema=public
+      NEXTAUTH_URL: ${NEXTAUTH_URL:-http://localhost:3000}
+      NEXTAUTH_SECRET: ${NEXTAUTH_SECRET:?set NEXTAUTH_SECRET in .env (openssl rand -base64 32)}
+      SEED_OWNER_EMAIL: ${SEED_OWNER_EMAIL:-owner@evyap.local}
+      SEED_OWNER_PASSWORD: ${SEED_OWNER_PASSWORD:?set SEED_OWNER_PASSWORD in .env}
+      SEED_DEMO: ${SEED_DEMO:-false}
+      AI_CATEGORISE: ${AI_CATEGORISE:-false}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      ANTHROPIC_MODEL: ${ANTHROPIC_MODEL:-claude-haiku-5-5}
+
+volumes:
+  pgdata:
