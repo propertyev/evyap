@@ -1,0 +1,44 @@
+{
+  "menu": {
+    "dashboard": "Dashboard",
+    "import": "Import Data (Drag & Drop)",
+    "ledger": "Cash In & Cash Out",
+    "dc": "Debtor & Creditor",
+    "invoices": "Invoice | Receipt",
+    "performance": "Performance",
+    "plMonthly": "Profit & Loss - Monthly",
+    "plYearly": "Profit & Loss - Yearly",
+    "plSummary": "Profit & Loss - Summary",
+    "cashSummary": "Cash In & Cash Out - Summary",
+    "balanceSheet": "Balance Sheet",
+    "trialBalance": "Trial Balance",
+    "assets": "Assets",
+    "cashFlow": "Cash Flow",
+    "notes": "Notes",
+    "tax": "Tax & Zakat",
+    "cover": "Cover Page & Print",
+    "setup": "Company Profile & Last Year",
+    "export": "Export to Excel"
+  },
+  "rujukan": {
+    "label": "Rujukan",
+    "import": "Seret & lepas fail bank statement (Excel / CSV / PDF) di bawah — tiada lagi isi secara manual.",
+    "fillCells": "Sila isi maklumat di cell berwarna.",
+    "pickMonth": "Sila pilih bulan untuk lihat semula data yang telah diisi.",
+    "pickMonthPL": "Sila pilih bulan yang dikehendaki.",
+    "automatic": "Semua maklumat ini adalah automatik.",
+    "dc": "Sila isi maklumat di cell berwarna. Debtor = jualan kredit (pelanggan belum bayar). Creditor = belian kredit (belum bayar pembekal). Bayaran diterima dari debtor → Cash In kategori Debtor. Bayaran kepada creditor → Cash Out kategori Creditor.",
+    "invoice": "Sila isi amaun secara manual di cell berwarna. Klik Record untuk masukkan ke Cash In (Receipt) atau Debtor (Invoice).",
+    "assets": "Sila isi amaun secara manual di cell berwarna (Opening NBV, Costs, Depreciation Rate %). Additions diambil automatik dari Cash Out.",
+    "tax": "Sila isi amaun secara manual di cell berwarna. #Penting: Ini hanyalah pengiraan anggaran sahaja. Sila semak kadar terkini LHDN.",
+    "setup": "Setup Company Profile and Year. Isi \"Last Year Figure\" (baki awal tahun) untuk Balance Sheet yang tepat."
+  },
+  "tally": {
+    "ok": "Akaun Tepat",
+    "bad": "Akaun Tidak Tally - Beza",
+    "hint": "Sila semak Last Year Figure / Trial Balance"
+  },
+  "tax": {
+    "disclaimer": "Method pengiraan di atas hanyalah anggaran sahaja — sila rujuk LHDN / ejen cukai."
+  }
+}

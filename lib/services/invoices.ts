@@ -5,6 +5,7 @@ import { z } from 'zod';
 import { audit } from '../audit';
 import { AppError } from '../errors';
 import { assertCan } from '../permissions';
+import { invoiceTotals, lineTotal, type InvoiceView } from '../invoice-math';
 import { assertYearsUnlocked, getOrCreateFiscalYear } from './years';
 import { big, num, type Ctx, type Db } from './types';
 
@@ -29,12 +30,9 @@ export const invoiceInput = z.object({
   })).min(1).max(100),
 });
 export type InvoiceInput = z.input<typeof invoiceInput>;
+export type { InvoiceView };
 
-export const lineTotal = (price: number, qty: number) => Math.round(price * qty);
-export function invoiceTotals(lines: { price: number; qty: number }[], discount: number, tax: number) {
-  const subtotal = lines.reduce((a, l) => a + lineTotal(l.price, l.qty), 0);
-  return { subtotal, total: subtotal - discount + tax };
-}
+export { lineTotal, invoiceTotals };
 
 export async function nextRefNo(db: Db, companyId: string, type: 'INVOICE' | 'RECEIPT', year: number): Promise<string> {
   const prefix = `${type === 'INVOICE' ? 'INV' : 'RC'}-${year}-`;
@@ -43,25 +41,6 @@ export async function nextRefNo(db: Db, companyId: string, type: 'INVOICE' | 'RE
   });
   const n = last.length ? parseInt(last[0].refNo.slice(prefix.length), 10) || 0 : 0;
   return `${prefix}${String(n + 1).padStart(4, '0')}`;
-}
-
-export interface InvoiceView {
-  id: string;
-  type: 'INVOICE' | 'RECEIPT';
-  refNo: string;
-  date: string;
-  attention: string;
-  company: string;
-  address: string;
-  phone: string;
-  email: string;
-  salesType: string;
-  salesPerson: string;
-  discount: number;
-  tax: number;
-  total: number;
-  recorded: boolean;
-  lines: { description: string; price: number; qty: number }[];
 }
 
 function view(i: Awaited<ReturnType<PrismaClient['invoice']['findFirst']>> & { lines: { description: string; price: bigint; qty: number; position: number }[] }): InvoiceView {
