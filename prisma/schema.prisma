@@ -1,0 +1,279 @@
+// EVyap Accounts — Prisma schema.
+// The datasource provider is rewritten by scripts/set-provider.mjs from DATABASE_URL
+// (file: -> sqlite, postgres:// -> postgresql). Enums are stored as String and JSON as
+// String so the very same schema runs on both SQLite (local dev) and PostgreSQL.
+// All money columns are integer SEN (BigInt) — never floats.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Company {
+  id               String   @id @default(cuid())
+  name             String   @default("EVyap")
+  ssmNo            String   @default("")
+  address          String   @default("")
+  phone            String   @default("")
+  email            String   @default("")
+  logoUrl          String   @default("") // data: URI or URL
+  financialYearEnd String   @default("12-31")
+  createdAt        DateTime @default(now())
+
+  users          User[]
+  fiscalYears    FiscalYear[]
+  categories     Category[]
+  transactions   Transaction[]
+  importBatches  ImportBatch[]
+  categoryRules  CategoryRule[]
+  debtorCreditors DebtorCreditor[]
+  invoices       Invoice[]
+  bankFormats    BankFormat[]
+  auditLogs      AuditLog[]
+}
+
+model User {
+  id           String   @id @default(cuid())
+  companyId    String
+  name         String
+  email        String   @unique
+  passwordHash String
+  role         String   @default("STAFF") // OWNER | ACCOUNTANT | STAFF
+  createdAt    DateTime @default(now())
+
+  company Company @relation(fields: [companyId], references: [id])
+}
+
+model FiscalYear {
+  id          String  @id @default(cuid())
+  companyId   String
+  year        Int
+  closingStock BigInt @default(0)
+  locked      Boolean @default(false)
+
+  // "Last Year Figure" opening balances (sen)
+  openStock         BigInt @default(0)
+  openCapital       BigInt @default(0) // Modal Awal
+  openPL            BigInt @default(0) // Untung/Rugi Mula
+  openCash          BigInt @default(0) // Baki Mula
+  openLongTermLoan  BigInt @default(0)
+  openOtherLTLiab   BigInt @default(0)
+  openAdvances      BigInt @default(0)
+  openTradeDebtors  BigInt @default(0)
+  openCreditors     BigInt @default(0)
+
+  company     Company      @relation(fields: [companyId], references: [id])
+  fixedAssets FixedAsset[]
+  taxSetting  TaxSetting?
+
+  @@unique([companyId, year])
+}
+
+model Category {
+  id          String  @id @default(cuid())
+  companyId   String
+  name        String
+  direction   String // IN | OUT
+  // SALES | OTHER_INCOME | MODAL | LOAN | DEBTOR | COS | ADMIN | SELLING | FINANCIAL
+  // | AMBILAN | FA | PREP | CREDITOR
+  group       String
+  accountCode Int     @default(0)
+  isSystem    Boolean @default(false)
+
+  company      Company       @relation(fields: [companyId], references: [id])
+  transactions Transaction[]
+  rules        CategoryRule[]
+
+  @@unique([companyId, name])
+}
+
+model Transaction {
+  id            String   @id @default(cuid())
+  companyId     String
+  date          String // YYYY-MM-DD
+  year          Int
+  direction     String // IN | OUT
+  categoryId    String
+  details       String   @default("")
+  amount        BigInt // sen, always positive
+  partyName     String? // for Debtor / Creditor settlements
+  source        String   @default("MANUAL") // IMPORT | MANUAL | RECEIPT
+  importBatchId String?
+  hash          String
+  createdBy     String?
+  createdAt     DateTime @default(now())
+
+  company     Company      @relation(fields: [companyId], references: [id])
+  category    Category     @relation(fields: [categoryId], references: [id])
+  importBatch ImportBatch? @relation(fields: [importBatchId], references: [id])
+
+  @@unique([companyId, hash])
+  @@index([companyId, year])
+  @@index([importBatchId])
+}
+
+model ImportBatch {
+  id        String   @id @default(cuid())
+  companyId String
+  fileName  String
+  fileType  String
+  rowCount  Int      @default(0)
+  skipped   Int      @default(0)
+  columnMap String   @default("{}") // JSON
+  createdBy String?
+  createdAt DateTime @default(now())
+  status    String   @default("COMMITTED") // COMMITTED | UNDONE
+
+  company      Company       @relation(fields: [companyId], references: [id])
+  transactions Transaction[]
+}
+
+model CategoryRule {
+  id         String @id @default(cuid())
+  companyId  String
+  pattern    String // regex source (case-insensitive) or plain keyword
+  isRegex    Boolean @default(false)
+  categoryId String
+  direction  String // IN | OUT
+  priority   Int    @default(100) // lower = evaluated first; learned rules use 10
+  learned    Boolean @default(false)
+
+  company  Company  @relation(fields: [companyId], references: [id])
+  category Category @relation(fields: [categoryId], references: [id])
+
+  @@index([companyId, direction, priority])
+}
+
+model BankFormat {
+  id        String   @id @default(cuid())
+  companyId String
+  signature String // normalised header-row fingerprint
+  name      String   @default("")
+  columnMap String   @default("{}") // JSON
+  createdAt DateTime @default(now())
+
+  company Company @relation(fields: [companyId], references: [id])
+
+  @@unique([companyId, signature])
+}
+
+model DebtorCreditor {
+  id        String   @id @default(cuid())
+  companyId String
+  date      String
+  year      Int
+  type      String // DEBTOR | CREDITOR
+  partyName String
+  details   String   @default("")
+  amount    BigInt
+  invoiceId String?
+  createdAt DateTime @default(now())
+
+  company Company @relation(fields: [companyId], references: [id])
+  invoice Invoice? @relation(fields: [invoiceId], references: [id])
+
+  @@index([companyId, year])
+}
+
+model FixedAsset {
+  id                  String  @id @default(cuid())
+  fiscalYearId        String
+  category            String // one of the 7 FA category names
+  openingNBV          BigInt  @default(0)
+  cost                BigInt  @default(0)
+  depreciationRatePct Float   @default(0)
+
+  fiscalYear FiscalYear @relation(fields: [fiscalYearId], references: [id], onDelete: Cascade)
+
+  @@unique([fiscalYearId, category])
+}
+
+model Invoice {
+  id          String   @id @default(cuid())
+  companyId   String
+  type        String // INVOICE | RECEIPT
+  refNo       String
+  date        String
+  attention   String   @default("")
+  company     String   @default("")
+  address     String   @default("")
+  phone       String   @default("")
+  email       String   @default("")
+  salesType   String   @default("")
+  salesPerson String   @default("")
+  discount    BigInt   @default(0)
+  tax         BigInt   @default(0)
+  total       BigInt   @default(0)
+  recorded    Boolean  @default(false)
+  createdAt   DateTime @default(now())
+
+  owner           Company          @relation(fields: [companyId], references: [id])
+  lines           InvoiceLine[]
+  debtorCreditors DebtorCreditor[]
+
+  @@unique([companyId, refNo])
+}
+
+model InvoiceLine {
+  id          String @id @default(cuid())
+  invoiceId   String
+  description String @default("")
+  price       BigInt @default(0)
+  qty         Float  @default(1)
+  position    Int    @default(0)
+
+  invoice Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+}
+
+model TaxSetting {
+  id           String @id @default(cuid())
+  fiscalYearId String @unique
+  zakatPct     Float  @default(2.5)
+  reliefs      String @default("{}") // JSON {index: sen}
+  childCounts  String @default("{}") // JSON {index: count}
+  zakatPaid    BigInt @default(0)
+
+  fiscalYear FiscalYear @relation(fields: [fiscalYearId], references: [id], onDelete: Cascade)
+}
+
+// Per year of assessment, editable without code changes.
+model TaxReliefConfig {
+  id                 String @id @default(cuid())
+  yearOfAssessment   Int
+  idx                Int
+  label              String
+  limit              BigInt // sen (per child when kind = PER)
+  kind               String @default("CAPPED") // FIXED | CAPPED | PER
+
+  @@unique([yearOfAssessment, idx])
+}
+
+model TaxBandConfig {
+  id               String  @id @default(cuid())
+  yearOfAssessment Int
+  position         Int
+  upTo             BigInt? // sen upper bound of band, null = no upper bound
+  ratePct          Int
+
+  @@unique([yearOfAssessment, position])
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  companyId String
+  userId    String?
+  action    String
+  entity    String
+  entityId  String   @default("")
+  before    String   @default("null") // JSON
+  after     String   @default("null") // JSON
+  at        DateTime @default(now())
+
+  company Company @relation(fields: [companyId], references: [id])
+
+  @@index([companyId, at])
+}

@@ -1,0 +1,11 @@
+.tools/
+node_modules/
+.next/
+*.db
+*.db-journal
+.env
+.env.local
+test-results/
+playwright-report/
+.DS_Store
+tests/.tmp/
